@@ -1,35 +1,30 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "api/*.php":   { "runtime": "vercel-php@0.7.3" },
-    "admin/*.php": { "runtime": "vercel-php@0.7.3" },
-    "*.php":       { "runtime": "vercel-php@0.7.3" }
-  },
-  "rewrites": [
-    { "source": "/blog/:slug", "destination": "/blog-post.php?slug=:slug" }
-  ],
-  "redirects": [
-    { "source": "/config.php",    "destination": "/404.php", "permanent": false },
-    { "source": "/includes/(.*)", "destination": "/404.php", "permanent": false },
-    { "source": "/data/(.*)",     "destination": "/404.php", "permanent": false }
-  ],
-  "headers": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options",        "value": "SAMEORIGIN" },
-        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy",     "value": "geolocation=(), microphone=(), camera=()" }
-      ]
+      "src": "*.php",
+      "use": "vercel-php@0.7.3",
+      "config": { "includeFiles": "{includes/**,config.php,data/**}" }
     },
     {
-      "source": "/assets/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=604800, must-revalidate" }
-      ]
-    }
+      "src": "api/*.php",
+      "use": "vercel-php@0.7.3",
+      "config": { "includeFiles": "{includes/**,config.php,data/**}" }
+    },
+    {
+      "src": "admin/*.php",
+      "use": "vercel-php@0.7.3",
+      "config": { "includeFiles": "{includes/**,config.php,data/**}" }
+    },
+    { "src": "assets/**", "use": "@vercel/static" }
   ],
-  "cleanUrls": true,
-  "trailingSlash": false
+  "routes": [
+    { "src": "/config.php",       "status": 403 },
+    { "src": "/includes/(.*)",    "status": 403 },
+    { "src": "/data/(.*)",        "status": 403 },
+    { "src": "/blog/([a-z0-9-]+)/?", "dest": "/blog-post.php?slug=$1" },
+    { "handle": "filesystem" },
+    { "src": "/([a-z0-9-]+)",     "dest": "/$1.php" },
+    { "src": "/.*",               "dest": "/404.php", "status": 404 }
+  ]
 }
