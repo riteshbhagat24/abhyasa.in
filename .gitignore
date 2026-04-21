@@ -1,0 +1,40 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Runtime data (submissions, rate-limit buckets) — never commit
+/data/submissions/*
+!/data/submissions/.gitkeep
+/data/rate/*
+!/data/rate/.gitkeep
+
+# Logs
+*.log
+
+# Build output
+/dist/
+/build/
+
+# PHP
+/composer.phar
+/composer.lock
+
+# Uploaded media (content lives on the server, not in git)
+/assets/uploads/
