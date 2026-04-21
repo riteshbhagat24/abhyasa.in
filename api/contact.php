@@ -54,23 +54,25 @@ if ($errors) {
     exit;
 }
 
-// Basic rate-limit (per IP, 5/min)
+// Basic rate-limit (per IP, 5/min). Silently skipped on read-only filesystems.
 $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 $rateDir = __DIR__ . '/../data/rate';
-@mkdir($rateDir, 0755, true);
-$rateFile = $rateDir . '/' . preg_replace('/[^a-zA-Z0-9.:]/', '_', $ip) . '.txt';
-$now = time();
-$recent = [];
-if (is_file($rateFile)) {
-    $recent = array_filter(array_map('intval', explode(',', trim((string)file_get_contents($rateFile)))), fn($t) => $t > $now - 60);
+$rateEnabled = @mkdir($rateDir, 0755, true) || is_dir($rateDir);
+if ($rateEnabled && is_writable($rateDir)) {
+    $rateFile = $rateDir . '/' . preg_replace('/[^a-zA-Z0-9.:]/', '_', $ip) . '.txt';
+    $now = time();
+    $recent = [];
+    if (is_file($rateFile)) {
+        $recent = array_filter(array_map('intval', explode(',', trim((string)file_get_contents($rateFile)))), fn($t) => $t > $now - 60);
+    }
+    if (count($recent) >= 5) {
+        http_response_code(429);
+        echo json_encode(['ok' => false, 'error' => 'Too many requests. Please wait a minute and try again.']);
+        exit;
+    }
+    $recent[] = $now;
+    @file_put_contents($rateFile, implode(',', $recent));
 }
-if (count($recent) >= 5) {
-    http_response_code(429);
-    echo json_encode(['ok' => false, 'error' => 'Too many requests. Please wait a minute and try again.']);
-    exit;
-}
-$recent[] = $now;
-@file_put_contents($rateFile, implode(',', $recent));
 
 // Build record
 $record = [
@@ -85,11 +87,20 @@ $record = [
     'message' => $message,
 ];
 
-// Persist to JSON lines file
+// Persist to JSON lines file — gracefully no-op on read-only filesystems
+// (e.g. Vercel serverless, where $dir is read-only and file_put_contents fails).
+// On a real host, this persists as before.
 $dir = __DIR__ . '/../data/submissions';
-@mkdir($dir, 0755, true);
-$file = $dir . '/' . date('Y-m-d') . '.jsonl';
-@file_put_contents($file, json_encode($record, JSON_UNESCAPED_UNICODE) . PHP_EOL, FILE_APPEND | LOCK_EX);
+$persisted = false;
+if (@mkdir($dir, 0755, true) || is_dir($dir)) {
+    $file = $dir . '/' . date('Y-m-d') . '.jsonl';
+    $bytes = @file_put_contents($file, json_encode($record, JSON_UNESCAPED_UNICODE) . PHP_EOL, FILE_APPEND | LOCK_EX);
+    $persisted = ($bytes !== false);
+}
+// If persistence failed, log to stderr so it ends up in host's log stream.
+if (!$persisted) {
+    error_log('[abhyasa] enquiry not persisted (readonly fs?): ' . json_encode($record, JSON_UNESCAPED_UNICODE));
+}
 
 // ---- Optional: email the institute. Uncomment and configure as needed. ----
 // $to = 'sbisala@gmail.com';

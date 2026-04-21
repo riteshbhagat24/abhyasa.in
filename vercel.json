@@ -1,0 +1,35 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/*.php":   { "runtime": "vercel-php@0.7.3" },
+    "admin/*.php": { "runtime": "vercel-php@0.7.3" },
+    "*.php":       { "runtime": "vercel-php@0.7.3" }
+  },
+  "rewrites": [
+    { "source": "/blog/:slug", "destination": "/blog-post.php?slug=:slug" }
+  ],
+  "redirects": [
+    { "source": "/config.php",    "destination": "/404.php", "permanent": false },
+    { "source": "/includes/(.*)", "destination": "/404.php", "permanent": false },
+    { "source": "/data/(.*)",     "destination": "/404.php", "permanent": false }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options",        "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy",     "value": "geolocation=(), microphone=(), camera=()" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=604800, must-revalidate" }
+      ]
+    }
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false
+}
